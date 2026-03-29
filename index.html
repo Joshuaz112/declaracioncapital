@@ -16,30 +16,20 @@
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         
-        /* Estilos específicos para impresión y PDF */
-        @media print {
-            .no-print { display: none !important; }
-            .shadow-xl, .shadow-sm { box-shadow: none !important; border: 1px solid #e2e8f0 !important; }
-        }
-
-        /* Mejora visual para las filas en escritorio */
-        @media (min-width: 768px) {
-            .item-row:hover .delete-btn { opacity: 1; }
-        }
-        
-        /* Botón eliminar siempre visible en móviles */
-        @media (max-width: 767px) {
-            .delete-btn { opacity: 1 !important; }
-        }
+        /* Evita saltos de página dentro de secciones */
+        section { page-break-inside: avoid; }
 
         .form-input { 
             @apply w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base md:text-sm;
         }
 
-        /* Scroll personalizado para la tabla en móviles */
-        .custom-scrollbar::-webkit-scrollbar { height: 4px; }
-        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        /* Clase especial para la exportación */
+        .pdf-mode .no-print { display: none !important; }
+        .pdf-mode input { border: none !important; padding: 0 !important; background: transparent !important; }
+        .pdf-mode .custom-scrollbar { overflow: visible !important; }
+        .pdf-mode table { min-width: 100% !important; }
+        
+        .item-row:hover .delete-btn { opacity: 1; }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen pb-24 md:pb-20">
@@ -48,171 +38,159 @@
     <header class="bg-blue-900 text-white py-4 md:py-6 px-4 shadow-xl no-print border-b-4 border-orange-500 sticky top-0 z-50">
         <div class="max-w-4xl mx-auto flex flex-row justify-between items-center gap-2">
             <div class="flex items-center gap-3 md:gap-4">
-                <img src="https://joshua-zuniga.github.io/feria-melipilla/images/logotipo.svg" alt="Logo Asociación Blanco" class="h-10 md:h-16 w-auto">
-                <div class="text-left">
-                    <h1 class="text-lg md:text-2xl font-extrabold tracking-tight leading-tight">Capital Inicial</h1>
-                    <p class="text-blue-200 text-[10px] md:text-sm hidden sm:block">Feria Agrícola Melipilla</p>
-                </div>
+                <img src="https://joshua-zuniga.github.io/feria-melipilla/images/logotipo.svg" alt="Logo Asociación Blanco" class="h-10 md:h-14 w-auto">
+                <h1 class="text-lg md:text-xl font-extrabold tracking-tight leading-tight">Capital Inicial</h1>
             </div>
-            <button onclick="generarPDF()" class="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl shadow-lg transition-all flex items-center gap-2 text-sm md:text-base">
+            <button id="btn-descargar" onclick="generarPDF()" class="bg-orange-500 hover:bg-orange-600 active:scale-95 text-white font-bold py-2 md:py-3 px-4 md:px-6 rounded-xl shadow-lg transition-all flex items-center gap-2 text-sm">
                 <svg class="w-4 h-4 md:w-5 md:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                <span class="hidden xs:inline">PDF</span><span class="inline xs:hidden">Descargar</span>
+                <span class="inline">Descargar PDF</span>
             </button>
         </div>
     </header>
 
-    <main id="reporte-contenido" class="max-w-4xl mx-auto px-4 mt-4 md:mt-8 bg-white p-6 md:p-12 md:rounded-3xl shadow-sm border border-slate-200 mb-8">
-        
-        <!-- Encabezado del Reporte con LOGO A COLOR (Visible en PDF) -->
-        <div class="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 border-b-2 border-slate-100 pb-6 md:pb-8 gap-4 md:gap-6">
-            <div class="flex flex-col items-center md:items-start text-center md:text-left">
-                <img src="https://i.ibb.co/XxqFn7Nr/LOGO-feria-agricola-melipilla-2.png" alt="Logo Asociación Color" class="h-16 md:h-24 w-auto mb-3 md:mb-4" crossorigin="anonymous">
-                <h2 class="text-xl md:text-2xl font-black text-slate-900 uppercase leading-none">Declaración de Capital Inicial</h2>
-                <p class="text-slate-500 font-medium mt-1 text-sm md:text-base">Formulario de Activos - Sector Ferias Libres</p>
-            </div>
-            <div class="text-center md:text-right w-full md:w-auto">
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Documento Interno</p>
-                <p class="text-slate-800 font-bold text-xs md:text-sm">Asociación Gremial Feria Agrícola Melipilla</p>
-                <div class="mt-3 inline-block bg-slate-50 px-4 py-1.5 rounded-lg border border-slate-100">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase block">Fecha de Emisión</p>
-                    <p id="fecha-actual" class="text-slate-700 font-mono font-bold text-xs md:text-sm"></p>
-                </div>
-            </div>
-        </div>
-
-        <!-- 1. Datos del Socio -->
-        <section class="mb-8">
-            <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest mb-4 flex items-center">
-                <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px]">01</span> Datos del Socio / Contribuyente
-            </h3>
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-5">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Nombre Completo</label>
-                    <input type="text" id="socio_nombre" placeholder="Juan Pérez" class="form-input font-semibold">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">RUT</label>
-                    <input type="text" id="socio_rut" placeholder="12.345.678-9" class="form-input">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Teléfono</label>
-                    <input type="text" id="socio_tel" placeholder="+56 9 ..." class="form-input">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Correo Electrónico</label>
-                    <input type="email" id="socio_email" placeholder="correo@ejemplo.com" class="form-input">
-                </div>
-                <div class="space-y-1 sm:col-span-2">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Feria / Ubicación / Puesto N°</label>
-                    <input type="text" id="socio_ubicacion" placeholder="Feria Agrícola Melipilla - Puesto 45" class="form-input">
-                </div>
-            </div>
-        </section>
-
-        <!-- 2. Vehículo -->
-        <section class="mb-8">
-            <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest mb-4 flex items-center">
-                <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px]">02</span> Vehículo de Transporte (Activo Fijo)
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descripción del Vehículo</label>
-                    <input type="text" id="vehiculo_desc" placeholder="Ej: Chevrolet Aveo 1.4 2006" class="form-input bg-white font-bold">
-                </div>
-                <div class="space-y-1">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Tasación Fiscal (SII)</label>
-                    <div class="relative">
-                        <span class="absolute left-3 top-3 text-slate-400 font-bold">$</span>
-                        <input type="number" id="vehiculo_valor" placeholder="0" class="main-calc w-full p-3 pl-8 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none font-mono font-bold text-blue-900">
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <!-- 3. Equipamiento Detallado -->
-        <section class="mb-8">
-            <div class="flex justify-between items-center mb-4">
-                <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest flex items-center">
-                    <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px]">03</span> Inventario de Equipamiento
-                </h3>
-                <button onclick="addItem()" class="no-print text-[10px] font-bold bg-blue-50 hover:bg-blue-100 text-blue-700 px-3 py-2 rounded-lg transition-all border border-blue-100">+ AÑADIR BIEN</button>
-            </div>
+    <div id="capture-area" class="max-w-4xl mx-auto px-4 mt-4 md:mt-8">
+        <main id="reporte-contenido" class="bg-white p-6 md:p-12 md:rounded-3xl shadow-sm border border-slate-200 mb-8">
             
-            <!-- Contenedor con scroll para tablas en móvil -->
-            <div class="overflow-x-auto custom-scrollbar -mx-2 px-2">
-                <table class="w-full text-left border-collapse min-w-[500px]">
-                    <thead>
-                        <tr class="text-[10px] uppercase tracking-widest text-slate-400 border-b border-slate-100">
-                            <th class="py-3 px-2">Descripción del Activo</th>
-                            <th class="py-3 px-2 text-center w-16 md:w-20">Cant.</th>
-                            <th class="py-3 px-2 w-28 md:w-32">P. Unitario</th>
-                            <th class="py-3 px-2 text-right w-28 md:w-32">Subtotal</th>
-                            <th class="py-3 px-2 w-10 no-print text-center"></th>
-                        </tr>
-                    </thead>
-                    <tbody id="items_container">
-                        <!-- Filas dinámicas -->
-                    </tbody>
-                </table>
-            </div>
-            <p class="text-[9px] text-slate-400 mt-2 block md:hidden italic">← Desliza para ver más columnas</p>
-        </section>
-
-        <!-- 4. Resumen de Flujo -->
-        <section class="mb-10">
-            <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest mb-4 flex items-center">
-                <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px]">04</span> Stock y Caja Inicial
-            </h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div class="flex justify-between items-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
-                    <span class="text-xs md:text-sm font-bold text-slate-600">Mercadería (1 día)</span>
-                    <div class="relative">
-                        <span class="absolute left-2 top-2 text-slate-400 font-bold text-xs">$</span>
-                        <input type="number" id="valor_stock" placeholder="0" class="main-calc w-24 md:w-32 p-2 pl-5 bg-white border border-slate-100 rounded-lg text-right font-mono font-bold text-sm">
-                    </div>
+            <!-- Encabezado del Reporte con LOGO A COLOR -->
+            <div class="flex flex-col md:flex-row justify-between items-center md:items-start mb-8 border-b-2 border-slate-100 pb-6 md:pb-8 gap-4 md:gap-6">
+                <div class="flex flex-col items-center md:items-start text-center md:text-left">
+                    <img src="https://i.ibb.co/XxqFn7Nr/LOGO-feria-agricola-melipilla-2.png" alt="Logo Asociación Color" class="h-16 md:h-24 w-auto mb-3 md:mb-4" crossorigin="anonymous">
+                    <h2 class="text-xl md:text-2xl font-black text-slate-900 uppercase leading-none">Declaración de Capital Inicial</h2>
+                    <p class="text-slate-500 font-medium mt-1 text-sm md:text-base">Activos para Desarrollo de Negocio</p>
                 </div>
-                <div class="flex justify-between items-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
-                    <span class="text-xs md:text-sm font-bold text-slate-600">Fondo Caja (Sencillo)</span>
-                    <div class="relative">
-                        <span class="absolute left-2 top-2 text-slate-400 font-bold text-xs">$</span>
-                        <input type="number" id="valor_caja" placeholder="0" class="main-calc w-24 md:w-32 p-2 pl-5 bg-white border border-slate-100 rounded-lg text-right font-mono font-bold text-sm">
+                <div class="text-center md:text-right w-full md:w-auto">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1">Registro 5354</p>
+                    <p class="text-slate-800 font-bold text-xs">Asociación Gremial Feria Agrícola Melipilla</p>
+                    <div class="mt-3 inline-block bg-slate-50 px-4 py-1.5 rounded-lg border border-slate-100 text-left min-w-[140px]">
+                        <p class="text-[9px] text-slate-400 font-bold uppercase block">Fecha de Emisión</p>
+                        <p id="fecha-actual" class="text-slate-700 font-mono font-bold text-xs"></p>
                     </div>
                 </div>
             </div>
-        </section>
 
-        <!-- Gran Total -->
-        <div class="bg-blue-900 rounded-2xl p-6 md:p-8 text-white flex flex-col md:flex-row justify-between items-center shadow-lg border-b-8 border-orange-500 gap-6">
-            <div class="text-center md:text-left">
-                <p class="text-blue-300 text-[10px] font-black uppercase tracking-[0.2em] mb-1">Capital Inicial Total</p>
-                <div id="total_display" class="text-4xl md:text-5xl font-black font-mono tracking-tighter leading-none">$ 0</div>
+            <!-- 1. Datos del Socio -->
+            <section class="mb-8">
+                <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest mb-4 flex items-center">
+                    <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px] no-print">01</span> Datos del Socio / Contribuyente
+                </h3>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Nombre Completo</label>
+                        <div class="pdf-val font-semibold text-slate-800 p-2 md:p-0"><input type="text" id="socio_nombre" placeholder="Nombre" class="form-input"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">RUT</label>
+                        <div class="pdf-val text-slate-800 p-2 md:p-0"><input type="text" id="socio_rut" placeholder="RUT" class="form-input"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Teléfono</label>
+                        <div class="pdf-val text-slate-800 p-2 md:p-0"><input type="text" id="socio_tel" placeholder="Teléfono" class="form-input"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Feria / Puesto</label>
+                        <div class="pdf-val text-slate-800 p-2 md:p-0"><input type="text" id="socio_ubicacion" placeholder="N° Puesto" class="form-input"></div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 2. Vehículo -->
+            <section class="mb-8">
+                <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest mb-4 flex items-center">
+                    <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px] no-print">02</span> Vehículo de Transporte (Activo Fijo)
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4 p-4 md:p-6 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Descripción</label>
+                        <div class="pdf-val font-bold text-slate-800"><input type="text" id="vehiculo_desc" placeholder="Ej: Aveo 2006" class="form-input bg-white"></div>
+                    </div>
+                    <div class="space-y-1">
+                        <label class="text-[10px] font-bold text-slate-400 uppercase ml-1">Valor Tasación Fiscal (SII)</label>
+                        <div class="pdf-val font-mono font-bold text-blue-900 flex items-center">
+                            <span class="mr-1">$</span>
+                            <input type="number" id="vehiculo_valor" placeholder="0" class="main-calc w-full bg-transparent p-0 border-none outline-none">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 3. Inventario de Equipamiento -->
+            <section class="mb-8">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest flex items-center">
+                        <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px] no-print">03</span> Inventario de Bienes
+                    </h3>
+                    <button onclick="addItem()" class="no-print text-[10px] font-bold bg-blue-50 text-blue-700 px-3 py-2 rounded-lg border border-blue-100">+ AÑADIR BIEN</button>
+                </div>
+                
+                <div class="overflow-x-auto custom-scrollbar border border-slate-100 rounded-xl">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="text-[9px] md:text-[10px] uppercase tracking-widest text-slate-400 bg-slate-50">
+                                <th class="py-3 px-3">Descripción</th>
+                                <th class="py-3 px-1 text-center w-14">Cant.</th>
+                                <th class="py-3 px-2 w-24 md:w-32">P. Unit.</th>
+                                <th class="py-3 px-3 text-right w-24 md:w-32">Subtotal</th>
+                                <th class="py-3 px-2 w-10 no-print"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="items_container">
+                            <!-- Filas -->
+                        </tbody>
+                    </table>
+                </div>
+                <p class="text-[9px] text-slate-400 mt-2 no-print italic text-center">Desliza para ver más columnas en el celular</p>
+            </section>
+
+            <!-- 4. Stock y Caja -->
+            <section class="mb-10">
+                <h3 class="text-xs md:text-sm font-black text-blue-700 uppercase tracking-widest mb-4 flex items-center">
+                    <span class="bg-blue-100 p-1.5 rounded mr-2 text-[10px] no-print">04</span> Stock y Efectivo
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="flex justify-between items-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
+                        <span class="text-xs font-bold text-slate-600">Mercadería (1 día)</span>
+                        <div class="pdf-val font-mono font-bold text-slate-800 flex items-center">
+                            <span class="mr-1">$</span>
+                            <input type="number" id="valor_stock" placeholder="0" class="main-calc w-24 bg-transparent text-right outline-none">
+                        </div>
+                    </div>
+                    <div class="flex justify-between items-center p-4 border border-slate-100 rounded-2xl bg-slate-50/50">
+                        <span class="text-xs font-bold text-slate-600">Fondo Caja</span>
+                        <div class="pdf-val font-mono font-bold text-slate-800 flex items-center">
+                            <span class="mr-1">$</span>
+                            <input type="number" id="valor_caja" placeholder="0" class="main-calc w-24 bg-transparent text-right outline-none">
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Total -->
+            <div class="bg-blue-900 rounded-2xl p-6 md:p-10 text-white flex flex-col md:flex-row justify-between items-center shadow-lg border-b-8 border-orange-500 gap-8">
+                <div class="text-center md:text-left">
+                    <p class="text-blue-300 text-[10px] font-black uppercase tracking-[0.2em] mb-2">Capital Inicial Total</p>
+                    <div id="total_display" class="text-4xl md:text-6xl font-black font-mono tracking-tighter">$ 0</div>
+                </div>
+                <div class="w-full md:w-auto text-center md:text-right border-t md:border-t-0 md:border-l border-blue-800 pt-6 md:pt-0 md:pl-10">
+                    <div class="mt-8 border-t border-white/30 w-48 mx-auto md:ml-auto pt-2 text-[10px] font-bold uppercase tracking-widest">Firma del Socio</div>
+                    <p class="text-blue-400 text-[9px] mt-2 italic">Declaro bajo juramento que los datos <br>expuestos son fidedignos.</p>
+                </div>
             </div>
-            <div class="w-full md:w-auto text-center md:text-right border-t md:border-t-0 md:border-l border-blue-800 pt-6 md:pt-0 md:pl-8">
-                <p class="text-blue-300 text-[9px] md:text-[10px] italic">Declaro que los datos <br class="hidden md:block"> entregados son fidedignos.</p>
-                <div class="mt-4 border-t border-blue-400 w-32 md:w-40 mx-auto md:ml-auto pt-2 text-[10px] font-bold opacity-60">Firma del Socio</div>
-            </div>
-        </div>
 
-        <!-- Footer del Reporte -->
-        <footer class="mt-10 pt-6 border-t border-slate-100 flex flex-col items-center">
-            <img src="https://i.ibb.co/XxqFn7Nr/LOGO-feria-agricola-melipilla-2.png" alt="Mini Logo" class="h-8 md:h-10 w-auto opacity-30 grayscale mb-3">
-            <p class="text-[9px] md:text-[10px] text-slate-400 leading-relaxed max-w-xs md:max-w-lg text-center uppercase font-bold tracking-tighter">
-                Asociación Gremial Feria Agrícola Melipilla • Melipilla, Chile
-            </p>
-        </footer>
-    </main>
+            <!-- Footer Reporte -->
+            <footer class="mt-12 pt-8 border-t border-slate-100 text-center">
+                <p class="text-[9px] text-slate-400 uppercase font-black tracking-widest">Asociación Gremial Feria Agrícola Melipilla • Melipilla, Chile</p>
+            </footer>
+        </main>
+    </div>
 
-    <!-- Botón flotante para copiar (Accesibilidad móvil mejorada) -->
+    <!-- Acciones Flotantes -->
     <div class="fixed bottom-6 right-6 no-print flex flex-col gap-3">
-        <button onclick="copiarResumen()" class="bg-slate-900 text-white p-4 rounded-full shadow-2xl active:scale-90 transition-all group relative">
+        <button onclick="copiarResumen()" class="bg-slate-900 text-white p-4 rounded-full shadow-2xl active:scale-90 transition-all group">
             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span class="absolute right-16 bg-slate-800 text-white text-[10px] py-1 px-3 rounded opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap hidden md:block">Copiar Texto SII</span>
         </button>
     </div>
 
-    <div id="copy_msg" class="hidden fixed bottom-24 right-6 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm no-print animate-bounce">
-        ¡Resumen Copiado!
-    </div>
+    <div id="copy_msg" class="hidden fixed bottom-24 right-6 bg-green-600 text-white px-6 py-3 rounded-2xl shadow-2xl font-bold text-sm no-print animate-bounce">¡Copiado para el SII!</div>
 
     <script>
         const initialItems = [
@@ -229,24 +207,22 @@
 
         function createRow(data = { desc: '', qty: 1, price: 0 }) {
             const tr = document.createElement('tr');
-            tr.className = 'item-row border-b border-slate-50 group hover:bg-slate-50/50 transition-colors';
+            tr.className = 'item-row border-b border-slate-50 transition-colors';
             tr.innerHTML = `
-                <td class="py-3 md:py-4 px-2">
-                    <input type="text" value="${data.desc}" placeholder="Ej: Pesa manual" class="item-desc w-full bg-transparent border-none focus:ring-0 p-0 text-slate-700 font-semibold placeholder:text-slate-300 text-sm">
+                <td class="py-3 px-3">
+                    <div class="pdf-val font-semibold text-slate-700 text-sm"><input type="text" value="${data.desc}" placeholder="..." class="w-full bg-transparent border-none focus:ring-0 p-0 text-sm"></div>
                 </td>
-                <td class="py-3 md:py-4 px-2">
-                    <input type="number" value="${data.qty}" min="1" class="item-qty w-full bg-slate-100 rounded-lg border-none p-2 text-center font-bold text-slate-800 text-sm">
+                <td class="py-3 px-1">
+                    <div class="pdf-val text-center"><input type="number" value="${data.qty}" min="1" class="item-qty w-full bg-slate-50 rounded-lg border-none p-1.5 text-center font-bold text-sm"></div>
                 </td>
-                <td class="py-3 md:py-4 px-2">
-                    <input type="number" value="${data.price}" class="item-price w-full bg-slate-100 rounded-lg border-none p-2 font-mono text-sm text-right">
+                <td class="py-3 px-2">
+                    <div class="pdf-val flex items-center justify-end"><span class="mr-1 text-slate-400 text-[10px] no-print">$</span><input type="number" value="${data.price}" class="item-price w-full bg-slate-50 rounded-lg border-none p-1.5 font-mono text-xs text-right"></div>
                 </td>
-                <td class="py-3 md:py-4 px-2 text-right font-mono font-bold text-slate-800 text-sm item-subtotal">
+                <td class="py-3 px-3 text-right font-mono font-bold text-slate-800 text-sm item-subtotal">
                     ${formatCLP(data.qty * data.price)}
                 </td>
-                <td class="py-3 md:py-4 px-2 text-center no-print">
-                    <button onclick="removeRow(this)" class="delete-btn opacity-0 text-red-400 hover:text-red-600 active:scale-125 p-2 transition-all">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2" stroke-linecap="round"/></svg>
-                    </button>
+                <td class="py-3 px-2 text-center no-print">
+                    <button onclick="removeRow(this)" class="delete-btn opacity-0 text-red-400 p-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" stroke-width="2"/></svg></button>
                 </td>
             `;
             tr.querySelectorAll('input').forEach(i => i.addEventListener('input', updateAll));
@@ -281,56 +257,61 @@
             document.getElementById('total_display').textContent = formatCLP(total);
         }
 
-        function generarPDF() {
+        async function generarPDF() {
             const element = document.getElementById('reporte-contenido');
             const socioNombre = document.getElementById('socio_nombre').value || 'Socio';
+            const btn = document.getElementById('btn-descargar');
+
+            // 1. Fase Pre-exportación: Convertir Inputs a Texto para el PDF
+            document.body.classList.add('pdf-mode');
+            const originalInputs = document.querySelectorAll('input');
+            const inputValues = Array.from(originalInputs).map(i => i.value);
             
+            // Reemplazar visualmente los inputs por su valor en spans para el PDF
+            originalInputs.forEach(input => {
+                if (input.type === 'number' && input.value > 0) {
+                    // Si es número, le damos formato CLP si no es cantidad
+                    if(!input.classList.contains('item-qty')) {
+                        input.dataset.oldValue = input.value;
+                        // Opcional: podrías poner formato aquí, pero mejor solo el número
+                    }
+                }
+            });
+
             const opt = {
-                margin: 0.2,
+                margin: [0.3, 0.3],
                 filename: `Capital_${socioNombre}_FeriaMelipilla.pdf`,
-                image: { type: 'jpeg', quality: 0.98 },
-                html2canvas: { 
-                    scale: 3, 
-                    useCORS: true,
-                    letterRendering: true,
-                    scrollY: 0
-                },
+                image: { type: 'jpeg', quality: 1.0 },
+                html2canvas: { scale: 3, useCORS: true, letterRendering: true, logging: false },
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
-            const btn = event.currentTarget;
-            const originalText = btn.innerHTML;
-            btn.innerHTML = 'Procesando...';
             btn.disabled = true;
+            btn.innerHTML = 'Procesando...';
 
-            html2pdf().set(opt).from(element).save().then(() => {
-                btn.innerHTML = originalText;
+            try {
+                await html2pdf().set(opt).from(element).save();
+            } finally {
+                // 2. Fase Post-exportación: Restaurar UI
+                document.body.classList.remove('pdf-mode');
                 btn.disabled = false;
-            });
+                btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Descargar PDF`;
+            }
         }
 
         function copiarResumen() {
-            const nombre = document.getElementById('socio_nombre').value;
-            const rut = document.getElementById('socio_rut').value;
+            const nombre = document.getElementById('socio_nombre').value || 'N/A';
             const total = document.getElementById('total_display').textContent;
-            
-            let text = `--- FERIA AGRÍCOLA MELIPILLA ---\n`;
-            text += `Socio: ${nombre || 'N/A'} - RUT: ${rut || 'N/A'}\n`;
-            text += `Vehículo: ${document.getElementById('vehiculo_desc').value || 'N/A'} (${formatCLP(document.getElementById('vehiculo_valor').value || 0)})\n`;
-            text += `CAPITAL TOTAL: ${total}\n`;
-            text += `Fecha: ${new Date().toLocaleDateString('es-CL')}`;
-
+            const text = `Capital Inicial Feria Agrícola Melipilla\nSocio: ${nombre}\nTotal Declarado: ${total}\nFecha: ${new Date().toLocaleDateString('es-CL')}`;
             const el = document.createElement('textarea');
             el.value = text; document.body.appendChild(el); el.select();
             document.execCommand('copy'); document.body.removeChild(el);
-
             const msg = document.getElementById('copy_msg');
             msg.classList.remove('hidden'); setTimeout(() => msg.classList.add('hidden'), 2000);
         }
 
         window.onload = () => {
-            const fechaOpt = { day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-CL', fechaOpt);
+            document.getElementById('fecha-actual').textContent = new Date().toLocaleDateString('es-CL', { day: 'numeric', month: 'long', year: 'numeric' });
             initialItems.forEach(i => document.getElementById('items_container').appendChild(createRow(i)));
             document.querySelectorAll('.main-calc').forEach(i => i.addEventListener('input', updateAll));
             updateAll();
