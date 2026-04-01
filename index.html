@@ -5,8 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Reporte de Capital Inicial - Feria Agrícola Melipilla</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Librería para generar PDF -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
         body { 
@@ -16,20 +16,18 @@
         input::-webkit-outer-spin-button,
         input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
         
-        /* Evita saltos de página dentro de secciones */
-        section { page-break-inside: avoid; }
-
         .form-input { 
             @apply w-full p-3 bg-white border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all text-base md:text-sm;
         }
-
-        /* Clase especial para la exportación */
-        .pdf-mode .no-print { display: none !important; }
-        .pdf-mode input { border: none !important; padding: 0 !important; background: transparent !important; }
-        .pdf-mode .custom-scrollbar { overflow: visible !important; }
-        .pdf-mode table { min-width: 100% !important; }
         
         .item-row:hover .delete-btn { opacity: 1; }
+
+        /* Sin saltos de página internos en caso de impresión manual */
+        @media print {
+            .no-print, header, .fixed { display: none !important; }
+            html, body { background: white !important; }
+            #reporte-contenido { box-shadow: none !important; border: none !important; }
+        }
     </style>
 </head>
 <body class="bg-slate-100 min-h-screen pb-24 md:pb-20">
@@ -258,42 +256,107 @@
         }
 
         async function generarPDF() {
-            const element = document.getElementById('reporte-contenido');
             const socioNombre = document.getElementById('socio_nombre').value || 'Socio';
             const btn = document.getElementById('btn-descargar');
+            btn.disabled = true;
+            btn.innerHTML = 'Generando PDF...';
 
-            // 1. Fase Pre-exportación: Convertir Inputs a Texto para el PDF
-            document.body.classList.add('pdf-mode');
-            const originalInputs = document.querySelectorAll('input');
-            const inputValues = Array.from(originalInputs).map(i => i.value);
-            
-            // Reemplazar visualmente los inputs por su valor en spans para el PDF
-            originalInputs.forEach(input => {
-                if (input.type === 'number' && input.value > 0) {
-                    // Si es número, le damos formato CLP si no es cantidad
-                    if(!input.classList.contains('item-qty')) {
-                        input.dataset.oldValue = input.value;
-                        // Opcional: podrías poner formato aquí, pero mejor solo el número
-                    }
+            const element = document.getElementById('reporte-contenido');
+
+            // --- 1. Reemplazar cada <input> por un <span> con su valor ---
+            const allInputs = element.querySelectorAll('input');
+            const replacements = [];
+
+            allInputs.forEach(input => {
+                const span = document.createElement('span');
+                span.style.display = 'inline-block';
+
+                const val = input.value;
+                const isQty = input.classList.contains('item-qty');
+                const isNum = input.type === 'number';
+
+                if (isNum && !isQty && val !== '' && Number(val) > 0) {
+                    span.textContent = formatCLP(Number(val));
+                } else if (isQty && val !== '') {
+                    span.textContent = val;
+                } else {
+                    span.textContent = val || '—';
                 }
+
+                const cs = window.getComputedStyle(input);
+                span.style.fontFamily    = cs.fontFamily;
+                span.style.fontSize      = cs.fontSize;
+                span.style.fontWeight    = cs.fontWeight;
+                span.style.color         = cs.color;
+                span.style.letterSpacing = cs.letterSpacing;
+
+                const parent = input.parentNode;
+                const nextSib = input.nextSibling;
+                parent.replaceChild(span, input);
+                replacements.push({ input, span, parent, nextSib });
             });
 
-            const opt = {
-                margin: [0.3, 0.3],
-                filename: `Capital_${socioNombre}_FeriaMelipilla.pdf`,
-                image: { type: 'jpeg', quality: 1.0 },
-                html2canvas: { scale: 3, useCORS: true, letterRendering: true, logging: false },
-                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
-            };
-
-            btn.disabled = true;
-            btn.innerHTML = 'Procesando...';
+            // --- 2. Ocultar elementos no-print temporalmente ---
+            const noPrint = element.querySelectorAll('.no-print');
+            noPrint.forEach(el => el.style.display = 'none');
+            // Hacer la tabla visible completamente (sin scroll)
+            const scrollBox = element.querySelector('.overflow-x-auto');
+            const prevOverflow = scrollBox ? scrollBox.style.overflow : '';
+            if (scrollBox) scrollBox.style.overflow = 'visible';
 
             try {
-                await html2pdf().set(opt).from(element).save();
+                // --- 3. Capturar solo el contenido del reporte (layout desktop forzado) ---
+                // windowWidth = ancho real del elemento para evitar capturar el fondo gris exterior
+                const elWidth = Math.max(element.scrollWidth, 900);
+                const canvas = await html2canvas(element, {
+                    scale: 2,
+                    useCORS: true,
+                    allowTaint: true,
+                    backgroundColor: '#ffffff',
+                    scrollX: 0,
+                    scrollY: 0,
+                    windowWidth: elWidth,
+                    logging: false
+                });
+
+                // --- 4. Crear PDF tamaño carta y escalar imagen para llenar la hoja ---
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF({ unit: 'mm', format: 'letter', orientation: 'portrait' });
+
+                const margin = 8; // mm de margen uniforme en los 4 lados
+                const pageW = pdf.internal.pageSize.getWidth();   // 215.9 mm
+                const pageH = pdf.internal.pageSize.getHeight();  // 279.4 mm
+                const availW = pageW - 2 * margin;
+                const availH = pageH - 2 * margin;
+
+                // Escalar la imagen para que use todo el ancho disponible
+                // Si al hacerlo excede el alto, se limita por el alto y se centra
+                const ratio = canvas.height / canvas.width;
+                let imgW = availW;
+                let imgH = imgW * ratio;
+                if (imgH > availH) {
+                    imgH = availH;
+                    imgW = imgH / ratio;
+                }
+
+                // Centrar en la página (X e Y calculados para que quede perfectamente centrado)
+                const x = (pageW - imgW) / 2;
+                const y = (pageH - imgH) / 2;
+
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                pdf.addImage(imgData, 'JPEG', x, y, imgW, imgH);
+                pdf.save(`Capital_${socioNombre}_FeriaMelipilla.pdf`);
+
             } finally {
-                // 2. Fase Post-exportación: Restaurar UI
-                document.body.classList.remove('pdf-mode');
+                // --- 5. Restaurar todo a su estado original ---
+                replacements.forEach(({ input, span, parent, nextSib }) => {
+                    if (nextSib) parent.insertBefore(input, nextSib);
+                    else parent.appendChild(input);
+                    if (span.parentNode) span.parentNode.removeChild(span);
+                });
+                noPrint.forEach(el => el.style.display = '');
+                if (scrollBox) scrollBox.style.overflow = prevOverflow;
+
                 btn.disabled = false;
                 btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg> Descargar PDF`;
             }
